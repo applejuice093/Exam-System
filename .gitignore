@@ -1,0 +1,15 @@
+# Build outputs
+*.exe
+*.o
+bin/
+obj/
+output/
+exam_system
+
+# Runtime data files created by the app
+questions.txt
+exams.txt
+students.txt
+assignments.txt
+marks.txt
+temp.txt
