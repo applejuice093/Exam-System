@@ -8,9 +8,11 @@
 #include <iomanip>
 #include <sstream>
 #include <map>
+#include <limits>
 
 using namespace std;
 
+// Clears the console on both Windows and Unix-like systems.
 void clearScreen()
 {
 #ifdef _WIN32
@@ -20,6 +22,7 @@ void clearScreen()
 #endif
 }
 
+// Waits for the user to press Enter before returning to a menu.
 void pressEnterToContinue()
 {
     cout << "\nPress Enter to continue...";
@@ -27,6 +30,27 @@ void pressEnterToContinue()
     cin.get();
 }
 
+// Reads an integer, re-prompting on bad input. Exits if stdin is closed,
+// so a failed read can never leave a menu looping forever.
+int readInt(const string &retryPrompt = "Invalid input. Enter number: ")
+{
+    int value;
+    while (!(cin >> value))
+    {
+        if (cin.eof())
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            exit(0);
+        }
+        cout << retryPrompt;
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    return value;
+}
+
+// NOTE: this XOR step only obfuscates passwords in students.txt; it is not
+// real hashing. A production system should use a salted hash (e.g. bcrypt).
 string processPassword(string password)
 {
     string processed = "";
@@ -284,10 +308,10 @@ private:
         if (file.is_open())
         {
             file << examName << "|" << numQuestions << "|";
-            for (int i = 0; i < questionIDs.size(); ++i)
+            for (size_t i = 0; i < questionIDs.size(); ++i)
             {
                 file << questionIDs[i];
-                if (i < questionIDs.size() - 1)
+                if (i + 1 < questionIDs.size())
                     file << ",";
             }
             file << endl;
@@ -329,9 +353,8 @@ private:
         }
 
         cout << "Select Exam: ";
-        int examChoice;
-        cin >> examChoice;
-        if (examChoice < 1 || examChoice > exams.size())
+        int examChoice = readInt();
+        if (examChoice < 1 || examChoice > (int)exams.size())
         {
             cout << "Invalid selection." << endl;
             return;
@@ -367,9 +390,8 @@ private:
         }
 
         cout << "Select Student: ";
-        int studentChoice;
-        cin >> studentChoice;
-        if (studentChoice < 1 || studentChoice > students.size())
+        int studentChoice = readInt();
+        if (studentChoice < 1 || studentChoice > (int)students.size())
         {
             cout << "Invalid selection." << endl;
             return;
@@ -530,7 +552,7 @@ private:
             cout << "3. View All Students" << endl;
             cout << "4. Back" << endl;
             cout << "Enter choice: ";
-            cin >> choice;
+            choice = readInt();
 
             switch (choice)
             {
@@ -574,12 +596,7 @@ public:
             cout << "6. Logout" << endl;
             cout << "Enter choice: ";
 
-            while (!(cin >> choice))
-            {
-                cout << "Invalid input. Enter number: ";
-                cin.clear();
-                cin.ignore(10000, '\n');
-            }
+            choice = readInt();
 
             switch (choice)
             {
@@ -700,13 +717,12 @@ private:
         }
 
         cout << "Your pending exams:" << endl;
-        for (int i = 0; i < pendingExams.size(); ++i)
+        for (size_t i = 0; i < pendingExams.size(); ++i)
             cout << (i + 1) << ". " << pendingExams[i] << endl;
 
         cout << "Select Exam (0 to cancel): ";
-        int choice;
-        cin >> choice;
-        if (choice <= 0 || choice > pendingExams.size())
+        int choice = readInt();
+        if (choice <= 0 || choice > (int)pendingExams.size())
             return;
 
         string selectedExamName = pendingExams[choice - 1];
@@ -773,7 +789,7 @@ private:
         time_t startTime = time(0);
         time_t timeLimit = numQuestions * 60;
 
-        for (int i = 0; i < examQuestions.size(); ++i)
+        for (size_t i = 0; i < examQuestions.size(); ++i)
         {
             time_t currentTime = time(0);
             if (currentTime - startTime > timeLimit)
@@ -889,12 +905,7 @@ public:
             cout << "4. Logout" << endl;
             cout << "Enter choice: ";
 
-            while (!(cin >> choice))
-            {
-                cout << "Invalid input. Enter number: ";
-                cin.clear();
-                cin.ignore(10000, '\n');
-            }
+            choice = readInt();
 
             switch (choice)
             {
@@ -980,7 +991,11 @@ int main()
         cout << "2. Student Login" << endl;
         cout << "3. Exit" << endl;
         cout << "Choice: ";
-        cin >> userChoice;
+        if (!(cin >> userChoice))
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            break;
+        }
 
         if (userChoice == "3")
         {
