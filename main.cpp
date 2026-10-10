@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <sstream>
 #include <map>
+#include <limits>
 
 using namespace std;
 
@@ -25,6 +26,25 @@ void pressEnterToContinue()
     cout << "\nPress Enter to continue...";
     cin.ignore();
     cin.get();
+}
+
+// Reads an integer, re-prompting on bad input. Exits if stdin is closed,
+// so a failed read can never leave a menu looping forever.
+int readInt(const string &retryPrompt = "Invalid input. Enter number: ")
+{
+    int value;
+    while (!(cin >> value))
+    {
+        if (cin.eof())
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            exit(0);
+        }
+        cout << retryPrompt;
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+    return value;
 }
 
 string processPassword(string password)
