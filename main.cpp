@@ -592,12 +592,7 @@ public:
             cout << "6. Logout" << endl;
             cout << "Enter choice: ";
 
-            while (!(cin >> choice))
-            {
-                cout << "Invalid input. Enter number: ";
-                cin.clear();
-                cin.ignore(10000, '\n');
-            }
+            choice = readInt();
 
             switch (choice)
             {
@@ -906,12 +901,7 @@ public:
             cout << "4. Logout" << endl;
             cout << "Enter choice: ";
 
-            while (!(cin >> choice))
-            {
-                cout << "Invalid input. Enter number: ";
-                cin.clear();
-                cin.ignore(10000, '\n');
-            }
+            choice = readInt();
 
             switch (choice)
             {
