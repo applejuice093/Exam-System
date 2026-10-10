@@ -12,6 +12,7 @@
 
 using namespace std;
 
+// Clears the console on both Windows and Unix-like systems.
 void clearScreen()
 {
 #ifdef _WIN32
@@ -21,6 +22,7 @@ void clearScreen()
 #endif
 }
 
+// Waits for the user to press Enter before returning to a menu.
 void pressEnterToContinue()
 {
     cout << "\nPress Enter to continue...";
