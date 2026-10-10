@@ -722,8 +722,7 @@ private:
             cout << (i + 1) << ". " << pendingExams[i] << endl;
 
         cout << "Select Exam (0 to cancel): ";
-        int choice;
-        cin >> choice;
+        int choice = readInt();
         if (choice <= 0 || choice > (int)pendingExams.size())
             return;
 
