@@ -349,8 +349,7 @@ private:
         }
 
         cout << "Select Exam: ";
-        int examChoice;
-        cin >> examChoice;
+        int examChoice = readInt();
         if (examChoice < 1 || examChoice > (int)exams.size())
         {
             cout << "Invalid selection." << endl;
@@ -387,8 +386,7 @@ private:
         }
 
         cout << "Select Student: ";
-        int studentChoice;
-        cin >> studentChoice;
+        int studentChoice = readInt();
         if (studentChoice < 1 || studentChoice > (int)students.size())
         {
             cout << "Invalid selection." << endl;
