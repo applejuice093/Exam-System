@@ -284,10 +284,10 @@ private:
         if (file.is_open())
         {
             file << examName << "|" << numQuestions << "|";
-            for (int i = 0; i < questionIDs.size(); ++i)
+            for (size_t i = 0; i < questionIDs.size(); ++i)
             {
                 file << questionIDs[i];
-                if (i < questionIDs.size() - 1)
+                if (i + 1 < questionIDs.size())
                     file << ",";
             }
             file << endl;
