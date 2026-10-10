@@ -550,7 +550,7 @@ private:
             cout << "3. View All Students" << endl;
             cout << "4. Back" << endl;
             cout << "Enter choice: ";
-            cin >> choice;
+            choice = readInt();
 
             switch (choice)
             {
