@@ -47,6 +47,8 @@ int readInt(const string &retryPrompt = "Invalid input. Enter number: ")
     return value;
 }
 
+// NOTE: this XOR step only obfuscates passwords in students.txt; it is not
+// real hashing. A production system should use a salted hash (e.g. bcrypt).
 string processPassword(string password)
 {
     string processed = "";
