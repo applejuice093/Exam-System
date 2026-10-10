@@ -700,13 +700,13 @@ private:
         }
 
         cout << "Your pending exams:" << endl;
-        for (int i = 0; i < pendingExams.size(); ++i)
+        for (size_t i = 0; i < pendingExams.size(); ++i)
             cout << (i + 1) << ". " << pendingExams[i] << endl;
 
         cout << "Select Exam (0 to cancel): ";
         int choice;
         cin >> choice;
-        if (choice <= 0 || choice > pendingExams.size())
+        if (choice <= 0 || choice > (int)pendingExams.size())
             return;
 
         string selectedExamName = pendingExams[choice - 1];
@@ -773,7 +773,7 @@ private:
         time_t startTime = time(0);
         time_t timeLimit = numQuestions * 60;
 
-        for (int i = 0; i < examQuestions.size(); ++i)
+        for (size_t i = 0; i < examQuestions.size(); ++i)
         {
             time_t currentTime = time(0);
             if (currentTime - startTime > timeLimit)
