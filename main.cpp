@@ -331,7 +331,7 @@ private:
         cout << "Select Exam: ";
         int examChoice;
         cin >> examChoice;
-        if (examChoice < 1 || examChoice > exams.size())
+        if (examChoice < 1 || examChoice > (int)exams.size())
         {
             cout << "Invalid selection." << endl;
             return;
@@ -369,7 +369,7 @@ private:
         cout << "Select Student: ";
         int studentChoice;
         cin >> studentChoice;
-        if (studentChoice < 1 || studentChoice > students.size())
+        if (studentChoice < 1 || studentChoice > (int)students.size())
         {
             cout << "Invalid selection." << endl;
             return;
