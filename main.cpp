@@ -987,7 +987,11 @@ int main()
         cout << "2. Student Login" << endl;
         cout << "3. Exit" << endl;
         cout << "Choice: ";
-        cin >> userChoice;
+        if (!(cin >> userChoice))
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            break;
+        }
 
         if (userChoice == "3")
         {
