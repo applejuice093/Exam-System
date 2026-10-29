@@ -551,9 +551,16 @@ private:
         cin >> username;
 
         ifstream file("students.txt");
+        if (!file.is_open())
+        {
+            cout << "No students registered." << endl;
+            return;
+        }
+        // Only create temp.txt once we know there is a file to rewrite, so a
+        // missing students.txt doesn't leave a stray temp.txt behind.
         ofstream temp("temp.txt");
 
-        if (file.is_open() && temp.is_open())
+        if (temp.is_open())
         {
             string line, user, pass, fname;
             bool found = false;
