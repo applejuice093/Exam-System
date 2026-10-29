@@ -10,6 +10,8 @@
 #include <map>
 #include <limits>
 
+#include "exam_utils.h"
+
 using namespace std;
 
 // Clears the console on both Windows and Unix-like systems.
@@ -275,35 +277,21 @@ private:
         string idInput;
         getline(cin, idInput);
 
-        stringstream ss(idInput);
-        string idStr;
+        // Keep only IDs that exist in the bank; parseIdList already drops
+        // malformed entries and duplicates (so "1,1" can't double-count).
         vector<int> questionIDs;
-        int numQuestions = 0;
-
-        while (getline(ss, idStr, ','))
+        for (int id : parseIdList(idInput))
         {
-            try
+            for (const auto &q : questionBank)
             {
-                int id = stoi(idStr);
-                bool found = false;
-                for (const auto &q : questionBank)
-                {
-                    if (q.getQuestionID() == id)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found)
+                if (q.getQuestionID() == id)
                 {
                     questionIDs.push_back(id);
-                    numQuestions++;
+                    break;
                 }
             }
-            catch (...)
-            {
-            }
         }
+        int numQuestions = (int)questionIDs.size();
 
         if (questionIDs.empty())
         {
@@ -759,11 +747,8 @@ private:
         }
 
         vector<Question> examQuestions;
-        stringstream idStream(questionIDsStr);
-        string idStr;
-        while (getline(idStream, idStr, ','))
+        for (int id : parseIdList(questionIDsStr))
         {
-            int id = stoi(idStr);
             for (const auto &q : allQuestions)
                 if (q.getQuestionID() == id)
                     examQuestions.push_back(q);

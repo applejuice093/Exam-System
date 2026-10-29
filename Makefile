@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
 
-exam_system: main.cpp
+exam_system: main.cpp exam_utils.h
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 test: exam_system
