@@ -101,6 +101,34 @@ public:
     }
 };
 
+// Reads questions.txt (7 lines per question: id, text, options A-D, answer).
+// Shared by Admin and Student so both parse the file the same way.
+vector<Question> loadQuestionBank(const string &path = "questions.txt")
+{
+    vector<Question> bank;
+    ifstream file(path);
+    if (!file.is_open())
+        return bank;
+
+    int id;
+    string text, a, b, c, d;
+    char correct;
+    while (file >> id)
+    {
+        file.ignore();
+        getline(file, text);
+        getline(file, a);
+        getline(file, b);
+        getline(file, c);
+        getline(file, d);
+        if (!(file >> correct))
+            break; // truncated record at end of file
+        file.ignore();
+        bank.push_back(Question(id, text, a, b, c, d, correct));
+    }
+    return bank;
+}
+
 class User
 {
 protected:
@@ -135,28 +163,7 @@ private:
 
     void loadQuestions()
     {
-        questionBank.clear();
-        ifstream file("questions.txt");
-        if (!file.is_open())
-            return;
-
-        int id;
-        string text, a, b, c, d;
-        char correct;
-
-        while (file >> id)
-        {
-            file.ignore();
-            getline(file, text);
-            getline(file, a);
-            getline(file, b);
-            getline(file, c);
-            getline(file, d);
-            file >> correct;
-            file.ignore();
-            questionBank.push_back(Question(id, text, a, b, c, d, correct));
-        }
-        file.close();
+        questionBank = loadQuestionBank();
     }
 
     void saveQuestions()
@@ -633,26 +640,7 @@ private:
 
     void loadAllQuestions()
     {
-        allQuestions.clear();
-        ifstream file("questions.txt");
-        if (!file.is_open())
-            return;
-        int id;
-        string text, a, b, c, d;
-        char correct;
-        while (file >> id)
-        {
-            file.ignore();
-            getline(file, text);
-            getline(file, a);
-            getline(file, b);
-            getline(file, c);
-            getline(file, d);
-            file >> correct;
-            file.ignore();
-            allQuestions.push_back(Question(id, text, a, b, c, d, correct));
-        }
-        file.close();
+        allQuestions = loadQuestionBank();
     }
 
     map<string, bool> getCompletedExams()
