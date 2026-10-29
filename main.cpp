@@ -10,6 +10,8 @@
 #include <map>
 #include <limits>
 
+#include "exam_utils.h"
+
 using namespace std;
 
 // Clears the console on both Windows and Unix-like systems.
@@ -49,14 +51,27 @@ int readInt(const string &retryPrompt = "Invalid input. Enter number: ")
     return value;
 }
 
-// NOTE: this XOR step only obfuscates passwords in students.txt; it is not
-// real hashing. A production system should use a salted hash (e.g. bcrypt).
-string processPassword(string password)
+// Reads one answer letter A-D (case-insensitive), re-prompting on anything
+// else. Exits if stdin is closed so the loop can't spin forever on EOF.
+char readAnswerChoice(const string &prompt)
 {
-    string processed = "";
-    for (char c : password)
-        processed += char(c ^ 7);
-    return processed;
+    string token;
+    while (true)
+    {
+        cout << prompt;
+        if (!(cin >> token))
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            exit(0);
+        }
+        if (token.size() == 1)
+        {
+            char c = (char)toupper((unsigned char)token[0]);
+            if (c >= 'A' && c <= 'D')
+                return c;
+        }
+        cout << "Please enter A, B, C or D." << endl;
+    }
 }
 
 class Question
@@ -101,6 +116,34 @@ public:
     }
 };
 
+// Reads questions.txt (7 lines per question: id, text, options A-D, answer).
+// Shared by Admin and Student so both parse the file the same way.
+vector<Question> loadQuestionBank(const string &path = "questions.txt")
+{
+    vector<Question> bank;
+    ifstream file(path);
+    if (!file.is_open())
+        return bank;
+
+    int id;
+    string text, a, b, c, d;
+    char correct;
+    while (file >> id)
+    {
+        file.ignore();
+        getline(file, text);
+        getline(file, a);
+        getline(file, b);
+        getline(file, c);
+        getline(file, d);
+        if (!(file >> correct))
+            break; // truncated record at end of file
+        file.ignore();
+        bank.push_back(Question(id, text, a, b, c, d, correct));
+    }
+    return bank;
+}
+
 class User
 {
 protected:
@@ -135,28 +178,7 @@ private:
 
     void loadQuestions()
     {
-        questionBank.clear();
-        ifstream file("questions.txt");
-        if (!file.is_open())
-            return;
-
-        int id;
-        string text, a, b, c, d;
-        char correct;
-
-        while (file >> id)
-        {
-            file.ignore();
-            getline(file, text);
-            getline(file, a);
-            getline(file, b);
-            getline(file, c);
-            getline(file, d);
-            file >> correct;
-            file.ignore();
-            questionBank.push_back(Question(id, text, a, b, c, d, correct));
-        }
-        file.close();
+        questionBank = loadQuestionBank();
     }
 
     void saveQuestions()
@@ -183,15 +205,14 @@ private:
         clearScreen();
         cout << "\n=== Add New Question ===" << endl;
 
-        int id;
         cout << "Enter Question ID: ";
-        while (!(cin >> id))
-        {
-            cout << "Invalid input. Please enter a number: ";
-            cin.clear();
-            cin.ignore(10000, '\n');
-        }
+        int id = readInt("Invalid input. Please enter a number: ");
         cin.ignore();
+        if (id <= 0)
+        {
+            cout << "Question ID must be a positive number." << endl;
+            return;
+        }
 
         for (const auto &q : questionBank)
         {
@@ -216,15 +237,17 @@ private:
         cout << "Enter Option D: ";
         getline(cin, d);
 
-        while (true)
+        // Each field is one line in questions.txt; an empty line would make
+        // the question unreadable for students.
+        for (string *field : {&text, &a, &b, &c, &d})
+            *field = trim(*field);
+        if (text.empty() || a.empty() || b.empty() || c.empty() || d.empty())
         {
-            cout << "Enter Correct Answer (A/B/C/D): ";
-            cin >> correct;
-            correct = toupper(correct);
-            if (correct >= 'A' && correct <= 'D')
-                break;
-            cout << "Invalid choice!" << endl;
+            cout << "Question text and all four options are required." << endl;
+            return;
         }
+
+        correct = readAnswerChoice("Enter Correct Answer (A/B/C/D): ");
 
         questionBank.push_back(Question(id, text, a, b, c, d, correct));
         saveQuestions();
@@ -246,6 +269,22 @@ private:
             q.displayQuestion();
     }
 
+    // True if exams.txt already has an exam with this name. Students look
+    // exams up by name, so a duplicate would shadow the original.
+    bool examExists(const string &examName)
+    {
+        ifstream file("exams.txt");
+        string line, name;
+        while (getline(file, line))
+        {
+            stringstream ss(line);
+            getline(ss, name, '|');
+            if (name == examName)
+                return true;
+        }
+        return false;
+    }
+
     void setPaper()
     {
         clearScreen();
@@ -261,6 +300,17 @@ private:
         cout << "Enter Exam Name: ";
         cin.ignore();
         getline(cin, examName);
+        examName = trim(examName);
+        if (!isValidRecordField(examName))
+        {
+            cout << "Exam name must not be empty or contain '|'." << endl;
+            return;
+        }
+        if (examExists(examName))
+        {
+            cout << "An exam named '" << examName << "' already exists!" << endl;
+            return;
+        }
 
         viewAllQuestions();
 
@@ -268,35 +318,21 @@ private:
         string idInput;
         getline(cin, idInput);
 
-        stringstream ss(idInput);
-        string idStr;
+        // Keep only IDs that exist in the bank; parseIdList already drops
+        // malformed entries and duplicates (so "1,1" can't double-count).
         vector<int> questionIDs;
-        int numQuestions = 0;
-
-        while (getline(ss, idStr, ','))
+        for (int id : parseIdList(idInput))
         {
-            try
+            for (const auto &q : questionBank)
             {
-                int id = stoi(idStr);
-                bool found = false;
-                for (const auto &q : questionBank)
-                {
-                    if (q.getQuestionID() == id)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found)
+                if (q.getQuestionID() == id)
                 {
                     questionIDs.push_back(id);
-                    numQuestions++;
+                    break;
                 }
             }
-            catch (...)
-            {
-            }
         }
+        int numQuestions = (int)questionIDs.size();
 
         if (questionIDs.empty())
         {
@@ -398,6 +434,21 @@ private:
         }
         string selectedStudent = students[studentChoice - 1];
 
+        // Skip duplicates: a repeated line would list the exam twice as pending.
+        {
+            ifstream existing("assignments.txt");
+            string assigned;
+            string wanted = selectedStudent + "|" + selectedExam;
+            while (getline(existing, assigned))
+            {
+                if (assigned == wanted)
+                {
+                    cout << "\n" << selectedStudent << " is already assigned '" << selectedExam << "'." << endl;
+                    return;
+                }
+            }
+        }
+
         ofstream assignFile("assignments.txt", ios::app);
         if (assignFile.is_open())
         {
@@ -423,13 +474,12 @@ private:
         cout << left << setw(20) << "Student" << setw(30) << "Exam" << setw(10) << "Score" << endl;
         cout << string(60, '-') << endl;
 
+        MarkRecord rec;
         while (getline(file, line))
         {
-            stringstream ss(line);
-            string student, exam;
-            int score;
-            ss >> student >> exam >> score;
-            cout << left << setw(20) << student << setw(30) << exam << setw(10) << score << endl;
+            if (!parseMarkLine(line, rec))
+                continue;
+            cout << left << setw(20) << rec.student << setw(30) << rec.exam << setw(10) << rec.score << endl;
         }
         file.close();
     }
@@ -442,6 +492,11 @@ private:
         string username, password, fullName;
         cout << "Enter Student Username: ";
         cin >> username;
+        if (!isValidRecordField(username))
+        {
+            cout << "Username must not contain '|'." << endl;
+            return;
+        }
 
         ifstream check("students.txt");
         if (check.is_open())
@@ -462,9 +517,20 @@ private:
 
         cout << "Enter Password: ";
         cin >> password;
+        if (!isStorablePassword(password))
+        {
+            cout << "Password contains a character that can't be stored (e.g. an apostrophe)." << endl;
+            return;
+        }
         cout << "Enter Full Name: ";
         cin.ignore();
         getline(cin, fullName);
+        fullName = trim(fullName);
+        if (fullName.empty())
+        {
+            cout << "Full name is required." << endl;
+            return;
+        }
 
         ofstream file("students.txt", ios::app);
         if (file.is_open())
@@ -473,6 +539,27 @@ private:
             file.close();
             cout << "Student added successfully!" << endl;
         }
+    }
+
+    // Drops every assignments.txt line for this student so a re-created
+    // account with the same username doesn't inherit old exams.
+    void removeAssignmentsFor(const string &username)
+    {
+        ifstream in("assignments.txt");
+        if (!in.is_open())
+            return;
+        vector<string> kept;
+        string line;
+        while (getline(in, line))
+        {
+            if (line.substr(0, line.find('|')) != username)
+                kept.push_back(line);
+        }
+        in.close();
+
+        ofstream out("assignments.txt", ios::trunc);
+        for (const string &l : kept)
+            out << l << endl;
     }
 
     void removeStudent()
@@ -485,9 +572,16 @@ private:
         cin >> username;
 
         ifstream file("students.txt");
+        if (!file.is_open())
+        {
+            cout << "No students registered." << endl;
+            return;
+        }
+        // Only create temp.txt once we know there is a file to rewrite, so a
+        // missing students.txt doesn't leave a stray temp.txt behind.
         ofstream temp("temp.txt");
 
-        if (file.is_open() && temp.is_open())
+        if (temp.is_open())
         {
             string line, user, pass, fname;
             bool found = false;
@@ -508,7 +602,10 @@ private:
             rename("temp.txt", "students.txt");
 
             if (found)
+            {
+                removeAssignmentsFor(username);
                 cout << "Student removed!" << endl;
+            }
             else
                 cout << "Student not found!" << endl;
         }
@@ -633,26 +730,7 @@ private:
 
     void loadAllQuestions()
     {
-        allQuestions.clear();
-        ifstream file("questions.txt");
-        if (!file.is_open())
-            return;
-        int id;
-        string text, a, b, c, d;
-        char correct;
-        while (file >> id)
-        {
-            file.ignore();
-            getline(file, text);
-            getline(file, a);
-            getline(file, b);
-            getline(file, c);
-            getline(file, d);
-            file >> correct;
-            file.ignore();
-            allQuestions.push_back(Question(id, text, a, b, c, d, correct));
-        }
-        file.close();
+        allQuestions = loadQuestionBank();
     }
 
     map<string, bool> getCompletedExams()
@@ -662,14 +740,11 @@ private:
         if (marksFile.is_open())
         {
             string line;
+            MarkRecord rec;
             while (getline(marksFile, line))
             {
-                stringstream ss(line);
-                string user, exam;
-                int score;
-                ss >> user >> exam >> score;
-                if (user == this->username)
-                    completed[exam] = true;
+                if (parseMarkLine(line, rec) && rec.student == this->username)
+                    completed[rec.exam] = true;
             }
             marksFile.close();
         }
@@ -754,13 +829,12 @@ private:
             return;
         }
 
+        // exams.txt line: name|count|id1,id2,... The stored count is ignored;
+        // the exam is sized by the questions that still exist in the bank.
         stringstream ss(examData);
         string segment, questionIDsStr;
-        int numQuestions;
-
         getline(ss, segment, '|');
         getline(ss, segment, '|');
-        numQuestions = stoi(segment);
         getline(ss, questionIDsStr);
 
         loadAllQuestions();
@@ -771,16 +845,20 @@ private:
         }
 
         vector<Question> examQuestions;
-        stringstream idStream(questionIDsStr);
-        string idStr;
-        while (getline(idStream, idStr, ','))
+        for (int id : parseIdList(questionIDsStr))
         {
-            int id = stoi(idStr);
             for (const auto &q : allQuestions)
                 if (q.getQuestionID() == id)
                     examQuestions.push_back(q);
         }
 
+        if (examQuestions.empty())
+        {
+            cout << "This exam has no questions left in the bank. Ask the admin to fix it." << endl;
+            return;
+        }
+
+        int numQuestions = (int)examQuestions.size();
         int score = 0;
         cout << "\n========== " << selectedExamName << " ==========" << endl;
         cout << "Total Questions: " << numQuestions << endl;
@@ -799,10 +877,15 @@ private:
             }
 
             examQuestions[i].displayQuestion();
-            cout << "Your answer (A/B/C/D): ";
-            char answer;
-            cin >> answer;
-            answer = toupper(answer);
+            char answer = readAnswerChoice("Your answer (A/B/C/D): ");
+
+            // The check above only runs before showing a question, so an
+            // answer typed after the deadline must not be counted.
+            if (time(0) - startTime > timeLimit)
+            {
+                cout << "\nTime's up! That answer arrived after the time limit." << endl;
+                break;
+            }
 
             if (answer == examQuestions[i].getCorrectAnswer())
             {
@@ -823,7 +906,7 @@ private:
         ofstream marksFile("marks.txt", ios::app);
         if (marksFile.is_open())
         {
-            marksFile << this->username << " " << selectedExamName << " " << score << endl;
+            marksFile << formatMarkLine({this->username, selectedExamName, score}) << endl;
             marksFile.close();
         }
     }
@@ -845,15 +928,12 @@ private:
         cout << string(40, '-') << endl;
 
         bool found = false;
+        MarkRecord rec;
         while (getline(file, line))
         {
-            stringstream ss(line);
-            string student, exam;
-            int score;
-            ss >> student >> exam >> score;
-            if (student == this->username)
+            if (parseMarkLine(line, rec) && rec.student == this->username)
             {
-                cout << left << setw(30) << exam << setw(10) << score << endl;
+                cout << left << setw(30) << rec.exam << setw(10) << rec.score << endl;
                 found = true;
             }
         }
@@ -979,7 +1059,6 @@ public:
 
 int main()
 {
-    srand(static_cast<unsigned int>(time(0)));
     AuthenticationManager authManager;
     string userChoice;
 

@@ -42,17 +42,49 @@ Created in the working folder as you use the app:
 | File | Contents |
 | --- | --- |
 | `questions.txt` | Question bank |
-| `exams.txt` | `examName|numQuestions|id1,id2,...` |
-| `assignments.txt` | Which student has which exam |
-| `students.txt` | Student usernames, obfuscated passwords and names |
-| `marks.txt` | Exam results |
+| `exams.txt` | `examName\|numQuestions\|id1,id2,...` |
+| `assignments.txt` | `student\|examName`, one line per assignment |
+| `students.txt` | `username obfuscatedPassword Full Name` |
+| `marks.txt` | `student\|examName\|score` |
 
 Passwords are only XOR-obfuscated, not securely hashed.
+
+Older builds wrote `marks.txt` as `student exam score` (space-separated), which
+broke for exam names with spaces. Those lines are still read; new results use
+the `|` format. Exam names and usernames can't contain `|`.
+
+## Rules the app enforces
+
+- An exam is scored against the questions that still exist in the bank, and an
+  answer typed after the time limit is not counted.
+- Answers must be A-D; anything else re-prompts.
+- Exam names must be unique; assigning the same exam twice to a student is refused.
+- Removing a student also removes their pending assignments (marks are kept).
+- Passwords that the XOR step would turn into whitespace (such as ones with an
+  apostrophe) are rejected because they can't be stored in `students.txt`.
+
+## Code layout
+
+| File | Purpose |
+| --- | --- |
+| `main.cpp` | Menus, file I/O and the `Admin` / `Student` / `AuthenticationManager` classes |
+| `exam_utils.h` | Pure helpers (parsing, validation, password obfuscation) shared with the tests |
 
 ## Tests
 
 ```bash
-make test
+make test        # unit tests, then the end-to-end smoke test
+make unit        # unit tests only
 ```
 
-Runs `tests/smoke_test.sh`, which drives the menus through stdin in a temporary folder.
+- `tests/unit_tests.cpp` checks the helpers in `exam_utils.h` (no framework needed).
+- `tests/smoke_test.sh` drives the real menus through stdin in a temporary folder:
+  admin login, adding questions, setting and assigning an exam, and a student
+  taking it.
+
+Without make:
+
+```bash
+g++ -std=c++17 -o tests/unit_tests tests/unit_tests.cpp && ./tests/unit_tests
+g++ -std=c++17 -o exam_system main.cpp && ./tests/smoke_test.sh
+```
