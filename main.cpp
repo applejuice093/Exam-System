@@ -51,6 +51,29 @@ int readInt(const string &retryPrompt = "Invalid input. Enter number: ")
     return value;
 }
 
+// Reads one answer letter A-D (case-insensitive), re-prompting on anything
+// else. Exits if stdin is closed so the loop can't spin forever on EOF.
+char readAnswerChoice(const string &prompt)
+{
+    string token;
+    while (true)
+    {
+        cout << prompt;
+        if (!(cin >> token))
+        {
+            cout << "\nInput closed. Exiting." << endl;
+            exit(0);
+        }
+        if (token.size() == 1)
+        {
+            char c = (char)toupper((unsigned char)token[0]);
+            if (c >= 'A' && c <= 'D')
+                return c;
+        }
+        cout << "Please enter A, B, C or D." << endl;
+    }
+}
+
 // NOTE: this XOR step only obfuscates passwords in students.txt; it is not
 // real hashing. A production system should use a salted hash (e.g. bcrypt).
 string processPassword(string password)
@@ -225,15 +248,7 @@ private:
         cout << "Enter Option D: ";
         getline(cin, d);
 
-        while (true)
-        {
-            cout << "Enter Correct Answer (A/B/C/D): ";
-            cin >> correct;
-            correct = toupper(correct);
-            if (correct >= 'A' && correct <= 'D')
-                break;
-            cout << "Invalid choice!" << endl;
-        }
+        correct = readAnswerChoice("Enter Correct Answer (A/B/C/D): ");
 
         questionBank.push_back(Question(id, text, a, b, c, d, correct));
         saveQuestions();
@@ -778,10 +793,7 @@ private:
             }
 
             examQuestions[i].displayQuestion();
-            cout << "Your answer (A/B/C/D): ";
-            char answer;
-            cin >> answer;
-            answer = toupper(answer);
+            char answer = readAnswerChoice("Your answer (A/B/C/D): ");
 
             if (answer == examQuestions[i].getCorrectAnswer())
             {
