@@ -730,13 +730,12 @@ private:
             return;
         }
 
+        // exams.txt line: name|count|id1,id2,... The stored count is ignored;
+        // the exam is sized by the questions that still exist in the bank.
         stringstream ss(examData);
         string segment, questionIDsStr;
-        int numQuestions;
-
         getline(ss, segment, '|');
         getline(ss, segment, '|');
-        numQuestions = stoi(segment);
         getline(ss, questionIDsStr);
 
         loadAllQuestions();
@@ -754,6 +753,13 @@ private:
                     examQuestions.push_back(q);
         }
 
+        if (examQuestions.empty())
+        {
+            cout << "This exam has no questions left in the bank. Ask the admin to fix it." << endl;
+            return;
+        }
+
+        int numQuestions = (int)examQuestions.size();
         int score = 0;
         cout << "\n========== " << selectedExamName << " ==========" << endl;
         cout << "Total Questions: " << numQuestions << endl;
