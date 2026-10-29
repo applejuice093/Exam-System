@@ -63,3 +63,51 @@ inline std::vector<int> parseIdList(const std::string &csv)
     }
     return ids;
 }
+
+// One line of marks.txt.
+struct MarkRecord
+{
+    std::string student;
+    std::string exam;
+    int score = 0;
+};
+
+// Formats a record as "student|exam|score". The '|' separator lets exam
+// names contain spaces (the old space-separated format could not).
+inline std::string formatMarkLine(const MarkRecord &r)
+{
+    return r.student + "|" + r.exam + "|" + std::to_string(r.score);
+}
+
+// Parses "student|exam|score", falling back to the legacy
+// "student exam score" layout written by older builds. Returns false for
+// blank or malformed lines.
+inline bool parseMarkLine(const std::string &line, MarkRecord &out)
+{
+    std::string s = trim(line);
+    if (s.empty())
+        return false;
+
+    std::size_t first = s.find('|');
+    if (first != std::string::npos)
+    {
+        std::size_t last = s.rfind('|');
+        if (last == first)
+            return false;
+        MarkRecord r;
+        r.student = trim(s.substr(0, first));
+        r.exam = trim(s.substr(first + 1, last - first - 1));
+        if (r.student.empty() || r.exam.empty() || !parseIntStrict(s.substr(last + 1), r.score))
+            return false;
+        out = r;
+        return true;
+    }
+
+    std::stringstream ss(s);
+    MarkRecord r;
+    std::string extra;
+    if (!(ss >> r.student >> r.exam >> r.score) || (ss >> extra))
+        return false;
+    out = r;
+    return true;
+}

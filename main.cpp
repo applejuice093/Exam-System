@@ -433,13 +433,12 @@ private:
         cout << left << setw(20) << "Student" << setw(30) << "Exam" << setw(10) << "Score" << endl;
         cout << string(60, '-') << endl;
 
+        MarkRecord rec;
         while (getline(file, line))
         {
-            stringstream ss(line);
-            string student, exam;
-            int score;
-            ss >> student >> exam >> score;
-            cout << left << setw(20) << student << setw(30) << exam << setw(10) << score << endl;
+            if (!parseMarkLine(line, rec))
+                continue;
+            cout << left << setw(20) << rec.student << setw(30) << rec.exam << setw(10) << rec.score << endl;
         }
         file.close();
     }
@@ -653,14 +652,11 @@ private:
         if (marksFile.is_open())
         {
             string line;
+            MarkRecord rec;
             while (getline(marksFile, line))
             {
-                stringstream ss(line);
-                string user, exam;
-                int score;
-                ss >> user >> exam >> score;
-                if (user == this->username)
-                    completed[exam] = true;
+                if (parseMarkLine(line, rec) && rec.student == this->username)
+                    completed[rec.exam] = true;
             }
             marksFile.close();
         }
@@ -822,7 +818,7 @@ private:
         ofstream marksFile("marks.txt", ios::app);
         if (marksFile.is_open())
         {
-            marksFile << this->username << " " << selectedExamName << " " << score << endl;
+            marksFile << formatMarkLine({this->username, selectedExamName, score}) << endl;
             marksFile.close();
         }
     }
@@ -844,15 +840,12 @@ private:
         cout << string(40, '-') << endl;
 
         bool found = false;
+        MarkRecord rec;
         while (getline(file, line))
         {
-            stringstream ss(line);
-            string student, exam;
-            int score;
-            ss >> student >> exam >> score;
-            if (student == this->username)
+            if (parseMarkLine(line, rec) && rec.student == this->username)
             {
-                cout << left << setw(30) << exam << setw(10) << score << endl;
+                cout << left << setw(30) << rec.exam << setw(10) << rec.score << endl;
                 found = true;
             }
         }
