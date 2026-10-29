@@ -74,16 +74,6 @@ char readAnswerChoice(const string &prompt)
     }
 }
 
-// NOTE: this XOR step only obfuscates passwords in students.txt; it is not
-// real hashing. A production system should use a salted hash (e.g. bcrypt).
-string processPassword(string password)
-{
-    string processed = "";
-    for (char c : password)
-        processed += char(c ^ 7);
-    return processed;
-}
-
 class Question
 {
 private:
@@ -502,6 +492,11 @@ private:
         string username, password, fullName;
         cout << "Enter Student Username: ";
         cin >> username;
+        if (!isValidRecordField(username))
+        {
+            cout << "Username must not contain '|'." << endl;
+            return;
+        }
 
         ifstream check("students.txt");
         if (check.is_open())
@@ -522,9 +517,20 @@ private:
 
         cout << "Enter Password: ";
         cin >> password;
+        if (!isStorablePassword(password))
+        {
+            cout << "Password contains a character that can't be stored (e.g. an apostrophe)." << endl;
+            return;
+        }
         cout << "Enter Full Name: ";
         cin.ignore();
         getline(cin, fullName);
+        fullName = trim(fullName);
+        if (fullName.empty())
+        {
+            cout << "Full name is required." << endl;
+            return;
+        }
 
         ofstream file("students.txt", ios::app);
         if (file.is_open())

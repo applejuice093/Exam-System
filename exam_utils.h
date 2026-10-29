@@ -120,3 +120,26 @@ inline bool isValidRecordField(const std::string &s)
         return false;
     return s.find_first_of("|\r\n") == std::string::npos;
 }
+
+// NOTE: this XOR step only obfuscates passwords in students.txt; it is not
+// real hashing. A production system should use a salted hash (e.g. bcrypt).
+inline std::string processPassword(const std::string &password)
+{
+    std::string processed;
+    for (char c : password)
+        processed += char(c ^ 7);
+    return processed;
+}
+
+// students.txt is whitespace-separated, so the obfuscated password must not
+// contain whitespace. XOR 7 turns an apostrophe (0x27) into a space, which
+// would split the record and lock the student out.
+inline bool isStorablePassword(const std::string &password)
+{
+    if (password.empty())
+        return false;
+    for (char c : processPassword(password))
+        if (std::isspace(static_cast<unsigned char>(c)) || c == '\0')
+            return false;
+    return true;
+}
