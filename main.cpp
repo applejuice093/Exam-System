@@ -795,6 +795,14 @@ private:
             examQuestions[i].displayQuestion();
             char answer = readAnswerChoice("Your answer (A/B/C/D): ");
 
+            // The check above only runs before showing a question, so an
+            // answer typed after the deadline must not be counted.
+            if (time(0) - startTime > timeLimit)
+            {
+                cout << "\nTime's up! That answer arrived after the time limit." << endl;
+                break;
+            }
+
             if (answer == examQuestions[i].getCorrectAnswer())
             {
                 score++;
