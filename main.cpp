@@ -444,6 +444,21 @@ private:
         }
         string selectedStudent = students[studentChoice - 1];
 
+        // Skip duplicates: a repeated line would list the exam twice as pending.
+        {
+            ifstream existing("assignments.txt");
+            string assigned;
+            string wanted = selectedStudent + "|" + selectedExam;
+            while (getline(existing, assigned))
+            {
+                if (assigned == wanted)
+                {
+                    cout << "\n" << selectedStudent << " is already assigned '" << selectedExam << "'." << endl;
+                    return;
+                }
+            }
+        }
+
         ofstream assignFile("assignments.txt", ios::app);
         if (assignFile.is_open())
         {
