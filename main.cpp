@@ -541,6 +541,27 @@ private:
         }
     }
 
+    // Drops every assignments.txt line for this student so a re-created
+    // account with the same username doesn't inherit old exams.
+    void removeAssignmentsFor(const string &username)
+    {
+        ifstream in("assignments.txt");
+        if (!in.is_open())
+            return;
+        vector<string> kept;
+        string line;
+        while (getline(in, line))
+        {
+            if (line.substr(0, line.find('|')) != username)
+                kept.push_back(line);
+        }
+        in.close();
+
+        ofstream out("assignments.txt", ios::trunc);
+        for (const string &l : kept)
+            out << l << endl;
+    }
+
     void removeStudent()
     {
         clearScreen();
@@ -581,7 +602,10 @@ private:
             rename("temp.txt", "students.txt");
 
             if (found)
+            {
+                removeAssignmentsFor(username);
                 cout << "Student removed!" << endl;
+            }
             else
                 cout << "Student not found!" << endl;
         }
