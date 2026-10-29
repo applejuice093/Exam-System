@@ -215,15 +215,14 @@ private:
         clearScreen();
         cout << "\n=== Add New Question ===" << endl;
 
-        int id;
         cout << "Enter Question ID: ";
-        while (!(cin >> id))
-        {
-            cout << "Invalid input. Please enter a number: ";
-            cin.clear();
-            cin.ignore(10000, '\n');
-        }
+        int id = readInt("Invalid input. Please enter a number: ");
         cin.ignore();
+        if (id <= 0)
+        {
+            cout << "Question ID must be a positive number." << endl;
+            return;
+        }
 
         for (const auto &q : questionBank)
         {
@@ -247,6 +246,16 @@ private:
         getline(cin, c);
         cout << "Enter Option D: ";
         getline(cin, d);
+
+        // Each field is one line in questions.txt; an empty line would make
+        // the question unreadable for students.
+        for (string *field : {&text, &a, &b, &c, &d})
+            *field = trim(*field);
+        if (text.empty() || a.empty() || b.empty() || c.empty() || d.empty())
+        {
+            cout << "Question text and all four options are required." << endl;
+            return;
+        }
 
         correct = readAnswerChoice("Enter Correct Answer (A/B/C/D): ");
 
