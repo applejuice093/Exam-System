@@ -270,6 +270,22 @@ private:
             q.displayQuestion();
     }
 
+    // True if exams.txt already has an exam with this name. Students look
+    // exams up by name, so a duplicate would shadow the original.
+    bool examExists(const string &examName)
+    {
+        ifstream file("exams.txt");
+        string line, name;
+        while (getline(file, line))
+        {
+            stringstream ss(line);
+            getline(ss, name, '|');
+            if (name == examName)
+                return true;
+        }
+        return false;
+    }
+
     void setPaper()
     {
         clearScreen();
@@ -285,6 +301,17 @@ private:
         cout << "Enter Exam Name: ";
         cin.ignore();
         getline(cin, examName);
+        examName = trim(examName);
+        if (!isValidRecordField(examName))
+        {
+            cout << "Exam name must not be empty or contain '|'." << endl;
+            return;
+        }
+        if (examExists(examName))
+        {
+            cout << "An exam named '" << examName << "' already exists!" << endl;
+            return;
+        }
 
         viewAllQuestions();
 

@@ -111,3 +111,12 @@ inline bool parseMarkLine(const std::string &line, MarkRecord &out)
     out = r;
     return true;
 }
+
+// True if s can be stored as one field of the '|'-separated data files:
+// non-blank, and free of the '|' separator and line breaks.
+inline bool isValidRecordField(const std::string &s)
+{
+    if (trim(s).empty())
+        return false;
+    return s.find_first_of("|\r\n") == std::string::npos;
+}
