@@ -718,6 +718,7 @@ public:
             cout << "4. View Students' Marks" << endl;
             cout << "5. Manage Students" << endl;
             cout << "6. Logout" << endl;
+            cout << "7. View Questions" << endl;
             cout << "Enter choice: ";
 
             choice = readInt();
@@ -741,6 +742,9 @@ public:
                 break;
             case 6:
                 return;
+            case 7:
+                viewAllQuestions();
+                break;
             default:
                 cout << "Invalid choice!" << endl;
             }
