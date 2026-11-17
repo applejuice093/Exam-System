@@ -56,4 +56,61 @@ grep -q "You have no pending exams" student.txt
 grep -q "Unit Test 1 *1" student.txt
 grep -q '^alice|Unit Test 1|1$' marks.txt
 
+# Reserved username, short password, and view questions (same data folder).
+{
+  printf '1\nadmin\nadmin123\n\n'
+  printf '7\n\n'                                 # View Questions
+  printf '5\n1\nadmin\n\n'                       # reserved username
+  printf '1\nbob\nab\n\n'                        # too-short password
+  printf '1\nbob\npw2\nBob Jones\n\n\n4\n'       # add bob
+  printf '6\n3\n'
+} | timeout 10 "$BIN" > admin2.txt
+grep -q "Q1: What is 2+2?" admin2.txt
+grep -q "cannot be 'admin'" admin2.txt
+grep -q "3-64 characters" admin2.txt
+grep -q "Student added successfully" admin2.txt
+
+# Removing a student also drops their pending assignments (bob has none
+# yet; assign Midterm then remove).
+{
+  printf '1\nadmin\nadmin123\n\n'
+  printf '2\nMidterm\n1\n\n\n'
+  printf '3\n2\n2\n\n'                           # Midterm -> bob (exam 2, student 2)
+  printf '5\n2\nbob\n\n\n4\n'
+  printf '6\n3\n'
+} | timeout 10 "$BIN" > remove.txt
+grep -q "Student removed!" remove.txt
+if [ -f assignments.txt ]; then
+  if grep -q '^bob|' assignments.txt; then
+    echo "bob assignment was not removed" >&2
+    exit 1
+  fi
+fi
+
+# Fresh folder: lowercase answers and a CRLF assignment still work.
+WORK2="$(mktemp -d)"; trap 'rm -rf "$WORK" "$WORK2"' EXIT
+cd "$WORK2"
+printf '1\nWhat is 2+2?\n3\n4\n5\n22\nb\n' > questions.txt
+printf 'Unit Test 1|1|1\n' > exams.txt
+printf 'alice wp6 Alice Smith\n' > students.txt
+printf 'alice|Unit Test 1\r\n' > assignments.txt
+
+# Taking the exam with B should score 1/1 (answer stored as lowercase b).
+{
+  printf '2\nalice\npw1\n\n'
+  printf '1\n1\nb\n\n'
+  printf '4\n3\n'
+} | timeout 10 "$BIN" > lower.txt
+grep -q "Your Score: 1/1" lower.txt
+grep -q '^alice|Unit Test 1|1$' marks.txt
+
+# Re-assigning the same exam must be refused even though the file uses CRLF.
+{
+  printf '1\nadmin\nadmin123\n\n'
+  printf '3\n1\n1\n\n'
+  printf '6\n3\n'
+} | timeout 10 "$BIN" > crlf.txt
+grep -q "is already assigned" crlf.txt
+[ "$(grep -c '^alice|' assignments.txt)" -eq 1 ]
+
 echo "smoke test passed"
