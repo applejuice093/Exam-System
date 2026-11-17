@@ -1,6 +1,8 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2
 
+all: exam_system
+
 exam_system: main.cpp exam_utils.h
 	$(CXX) $(CXXFLAGS) -o $@ main.cpp
 
@@ -14,6 +16,13 @@ test: unit exam_system
 	./tests/smoke_test.sh
 
 clean:
-	rm -f exam_system exam_system.exe tests/unit_tests tests/unit_tests.exe
+	rm -f exam_system exam_system.exe tests/unit_tests tests/unit_tests.exe *.tmp
 
-.PHONY: unit test clean
+help:
+	@echo "make / make all  - build ./exam_system"
+	@echo "make unit        - run the helper unit tests"
+	@echo "make test        - unit tests, then the end-to-end smoke test"
+	@echo "make clean       - remove build outputs and temp files"
+	@echo "make help        - show this list"
+
+.PHONY: all unit test clean help
