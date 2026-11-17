@@ -486,9 +486,9 @@ private:
         string username, password, fullName;
         cout << "Enter Student Username: ";
         cin >> username;
-        if (!isValidRecordField(username))
+        if (!isValidUsername(username))
         {
-            cout << "Username must not contain '|'." << endl;
+            cout << "Username must be 1-32 characters, with no spaces or '|', and cannot be 'admin'." << endl;
             return;
         }
 
@@ -511,18 +511,18 @@ private:
 
         cout << "Enter Password: ";
         cin >> password;
-        if (!isStorablePassword(password))
+        if (!isAcceptablePassword(password))
         {
-            cout << "Password contains a character that can't be stored (e.g. an apostrophe)." << endl;
+            cout << "Password must be 3-64 characters and cannot use characters that can't be stored (e.g. an apostrophe)." << endl;
             return;
         }
         cout << "Enter Full Name: ";
         cin.ignore();
         getline(cin, fullName);
         fullName = trim(fullName);
-        if (fullName.empty())
+        if (fullName.empty() || fullName.size() > 80)
         {
-            cout << "Full name is required." << endl;
+            cout << "Full name is required and must be at most 80 characters." << endl;
             return;
         }
 
