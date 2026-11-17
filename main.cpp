@@ -9,6 +9,7 @@
 #include <sstream>
 #include <map>
 #include <limits>
+#include <cstdio>
 
 #include <cctype>
 
@@ -32,6 +33,34 @@ void pressEnterToContinue()
     cout << "\nPress Enter to continue...";
     cin.ignore();
     cin.get();
+}
+
+
+// Writes lines to path via a sibling .tmp file, then replaces the
+// original. Avoids leaving a half-written students.txt if the process
+// is interrupted mid-save. Existing temp.txt leftovers from older
+// builds are no longer used.
+bool rewriteLines(const string &path, const vector<string> &lines)
+{
+    const string tmp = path + ".tmp";
+    ofstream out(tmp);
+    if (!out)
+        return false;
+    for (const string &line : lines)
+        out << line << '\n';
+    out.close();
+    if (!out)
+    {
+        remove(tmp.c_str());
+        return false;
+    }
+    remove(path.c_str());
+    if (rename(tmp.c_str(), path.c_str()) != 0)
+    {
+        remove(tmp.c_str());
+        return false;
+    }
+    return true;
 }
 
 // Reads an integer, re-prompting on bad input. Exits if stdin is closed,
@@ -613,9 +642,8 @@ private:
         }
         in.close();
 
-        ofstream out("assignments.txt", ios::trunc);
-        for (const string &l : kept)
-            out << l << endl;
+        if (!rewriteLines("assignments.txt", kept))
+            cout << "Could not update assignments.txt." << endl;
     }
 
     void removeStudent()
@@ -633,40 +661,34 @@ private:
             cout << "No students registered." << endl;
             return;
         }
-        // Only create temp.txt once we know there is a file to rewrite, so a
-        // missing students.txt doesn't leave a stray temp.txt behind.
-        ofstream temp("temp.txt");
+        string line;
+        StudentRecord rec;
+        vector<string> kept;
+        bool found = false;
 
-        if (temp.is_open())
+        while (getline(file, line))
         {
-            string line;
-            StudentRecord rec;
-            bool found = false;
-
-            while (getline(file, line))
-            {
-                if (!parseStudentLine(line, rec))
-                    continue;
-                if (rec.username != username)
-                    temp << formatStudentLine(rec) << endl;
-                else
-                    found = true;
-            }
-
-            file.close();
-            temp.close();
-
-            remove("students.txt");
-            rename("temp.txt", "students.txt");
-
-            if (found)
-            {
-                removeAssignmentsFor(username);
-                cout << "Student removed!" << endl;
-            }
+            if (!parseStudentLine(line, rec))
+                continue;
+            if (rec.username != username)
+                kept.push_back(formatStudentLine(rec));
             else
-                cout << "Student not found!" << endl;
+                found = true;
         }
+        file.close();
+
+        if (!found)
+        {
+            cout << "Student not found!" << endl;
+            return;
+        }
+        if (!rewriteLines("students.txt", kept))
+        {
+            cout << "Could not update students.txt." << endl;
+            return;
+        }
+        removeAssignmentsFor(username);
+        cout << "Student removed!" << endl;
     }
 
     void viewAllStudents()
