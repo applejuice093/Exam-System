@@ -10,6 +10,8 @@
 #include <map>
 #include <limits>
 
+#include <cctype>
+
 #include "exam_utils.h"
 
 using namespace std;
@@ -130,15 +132,37 @@ vector<Question> loadQuestionBank(const string &path = "questions.txt")
     char correct;
     while (file >> id)
     {
-        file.ignore();
-        getline(file, text);
-        getline(file, a);
-        getline(file, b);
-        getline(file, c);
-        getline(file, d);
-        if (!(file >> correct))
+        // Drop any trailing junk on the ID line, then read the six text fields.
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+        if (!getline(file, text) || !getline(file, a) || !getline(file, b) ||
+            !getline(file, c) || !getline(file, d) || !(file >> correct))
             break; // truncated record at end of file
-        file.ignore();
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        correct = static_cast<char>(toupper(static_cast<unsigned char>(correct)));
+        text = trim(text);
+        a = trim(a);
+        b = trim(b);
+        c = trim(c);
+        d = trim(d);
+
+        // Skip unusable rows so a hand-edited file can't poison a whole exam.
+        if (id <= 0 || correct < 'A' || correct > 'D' ||
+            text.empty() || a.empty() || b.empty() || c.empty() || d.empty())
+            continue;
+
+        bool duplicate = false;
+        for (const auto &q : bank)
+        {
+            if (q.getQuestionID() == id)
+            {
+                duplicate = true;
+                break;
+            }
+        }
+        if (duplicate)
+            continue;
+
         bank.push_back(Question(id, text, a, b, c, d, correct));
     }
     return bank;
