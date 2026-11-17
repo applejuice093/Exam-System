@@ -274,12 +274,11 @@ private:
     bool examExists(const string &examName)
     {
         ifstream file("exams.txt");
-        string line, name;
+        string line;
+        ExamRecord rec;
         while (getline(file, line))
         {
-            stringstream ss(line);
-            getline(ss, name, '|');
-            if (name == examName)
+            if (parseExamLine(line, rec) && rec.name == examName)
                 return true;
         }
         return false;
@@ -343,14 +342,7 @@ private:
         ofstream file("exams.txt", ios::app);
         if (file.is_open())
         {
-            file << examName << "|" << numQuestions << "|";
-            for (size_t i = 0; i < questionIDs.size(); ++i)
-            {
-                file << questionIDs[i];
-                if (i + 1 < questionIDs.size())
-                    file << ",";
-            }
-            file << endl;
+            file << formatExamLine({examName, numQuestions, questionIDs}) << endl;
             file.close();
             cout << "\nExam '" << examName << "' set successfully!" << endl;
         }
@@ -369,15 +361,16 @@ private:
         }
 
         vector<string> exams;
-        string line, examName;
+        string line;
         int count = 1;
         cout << "Available Exams:" << endl;
+        ExamRecord examRec;
         while (getline(examsFile, line))
         {
-            stringstream ss(line);
-            getline(ss, examName, '|');
-            cout << count << ". " << examName << endl;
-            exams.push_back(examName);
+            if (!parseExamLine(line, examRec))
+                continue;
+            cout << count << ". " << examRec.name << endl;
+            exams.push_back(examRec.name);
             count++;
         }
         examsFile.close();
@@ -435,13 +428,15 @@ private:
         string selectedStudent = students[studentChoice - 1];
 
         // Skip duplicates: a repeated line would list the exam twice as pending.
+        // parseAssignmentLine trims a trailing CR so Windows-saved files still match.
         {
             ifstream existing("assignments.txt");
             string assigned;
-            string wanted = selectedStudent + "|" + selectedExam;
+            AssignmentRecord rec;
             while (getline(existing, assigned))
             {
-                if (assigned == wanted)
+                if (parseAssignmentLine(assigned, rec) &&
+                    rec.student == selectedStudent && rec.exam == selectedExam)
                 {
                     cout << "\n" << selectedStudent << " is already assigned '" << selectedExam << "'." << endl;
                     return;
@@ -452,7 +447,7 @@ private:
         ofstream assignFile("assignments.txt", ios::app);
         if (assignFile.is_open())
         {
-            assignFile << selectedStudent << "|" << selectedExam << endl;
+            assignFile << formatAssignmentLine({selectedStudent, selectedExam}) << endl;
             assignFile.close();
             cout << "\nAssigned successfully!" << endl;
         }
@@ -550,10 +545,17 @@ private:
             return;
         vector<string> kept;
         string line;
+        AssignmentRecord rec;
         while (getline(in, line))
         {
-            if (line.substr(0, line.find('|')) != username)
-                kept.push_back(line);
+            if (!parseAssignmentLine(line, rec))
+            {
+                if (!trim(line).empty())
+                    kept.push_back(line);
+                continue;
+            }
+            if (rec.student != username)
+                kept.push_back(formatAssignmentLine(rec));
         }
         in.close();
 
@@ -758,14 +760,11 @@ private:
         if (assignFile.is_open())
         {
             string line;
+            AssignmentRecord rec;
             while (getline(assignFile, line))
             {
-                stringstream ss(line);
-                string user, exam;
-                getline(ss, user, '|');
-                getline(ss, exam);
-                if (user == this->username)
-                    assigned.push_back(exam);
+                if (parseAssignmentLine(line, rec) && rec.student == this->username)
+                    assigned.push_back(rec.exam);
             }
             assignFile.close();
         }
@@ -809,34 +808,27 @@ private:
             return;
         }
 
-        string line, examData;
+        string line;
+        ExamRecord examRec;
+        bool foundExam = false;
         while (getline(examsFile, line))
         {
-            stringstream ss(line);
-            string name;
-            getline(ss, name, '|');
-            if (name == selectedExamName)
+            if (parseExamLine(line, examRec) && examRec.name == selectedExamName)
             {
-                examData = line;
+                foundExam = true;
                 break;
             }
         }
         examsFile.close();
 
-        if (examData.empty())
+        if (!foundExam)
         {
             cout << "Error: Exam not found." << endl;
             return;
         }
 
-        // exams.txt line: name|count|id1,id2,... The stored count is ignored;
-        // the exam is sized by the questions that still exist in the bank.
-        stringstream ss(examData);
-        string segment, questionIDsStr;
-        getline(ss, segment, '|');
-        getline(ss, segment, '|');
-        getline(ss, questionIDsStr);
-
+        // The stored count is ignored; the exam is sized by the questions
+        // that still exist in the bank.
         loadAllQuestions();
         if (allQuestions.empty())
         {
@@ -845,7 +837,7 @@ private:
         }
 
         vector<Question> examQuestions;
-        for (int id : parseIdList(questionIDsStr))
+        for (int id : examRec.questionIds)
         {
             for (const auto &q : allQuestions)
                 if (q.getQuestionID() == id)
