@@ -398,16 +398,15 @@ private:
         }
 
         vector<string> students;
-        string username, pass, fname;
         count = 1;
         cout << "\nAvailable Students:" << endl;
-        while (studentsFile >> username >> pass)
+        StudentRecord studentRec;
+        while (getline(studentsFile, line))
         {
-            getline(studentsFile, fname);
-            if (!fname.empty() && fname[0] == ' ')
-                fname = fname.substr(1);
-            cout << count << ". " << username << " (" << fname << ")" << endl;
-            students.push_back(username);
+            if (!parseStudentLine(line, studentRec))
+                continue;
+            cout << count << ". " << studentRec.username << " (" << studentRec.fullName << ")" << endl;
+            students.push_back(studentRec.username);
             count++;
         }
         studentsFile.close();
@@ -496,11 +495,11 @@ private:
         ifstream check("students.txt");
         if (check.is_open())
         {
-            string line, user, pass;
-            while (check >> user >> pass)
+            string line;
+            StudentRecord existing;
+            while (getline(check, line))
             {
-                getline(check, line);
-                if (user == username)
+                if (parseStudentLine(line, existing) && existing.username == username)
                 {
                     cout << "Student username already exists!" << endl;
                     check.close();
@@ -530,7 +529,7 @@ private:
         ofstream file("students.txt", ios::app);
         if (file.is_open())
         {
-            file << username << " " << processPassword(password) << " " << fullName << endl;
+            file << formatStudentLine({username, processPassword(password), fullName}) << endl;
             file.close();
             cout << "Student added successfully!" << endl;
         }
@@ -585,14 +584,16 @@ private:
 
         if (temp.is_open())
         {
-            string line, user, pass, fname;
+            string line;
+            StudentRecord rec;
             bool found = false;
 
-            while (file >> user >> pass)
+            while (getline(file, line))
             {
-                getline(file, fname);
-                if (user != username)
-                    temp << user << " " << pass << fname << endl;
+                if (!parseStudentLine(line, rec))
+                    continue;
+                if (rec.username != username)
+                    temp << formatStudentLine(rec) << endl;
                 else
                     found = true;
             }
@@ -625,16 +626,16 @@ private:
             return;
         }
 
-        string user, pass, fname;
+        string line;
+        StudentRecord rec;
         cout << left << setw(20) << "Username" << "Full Name" << endl;
         cout << string(40, '-') << endl;
 
-        while (file >> user >> pass)
+        while (getline(file, line))
         {
-            getline(file, fname);
-            if (!fname.empty() && fname[0] == ' ')
-                fname = fname.substr(1);
-            cout << left << setw(20) << user << fname << endl;
+            if (!parseStudentLine(line, rec))
+                continue;
+            cout << left << setw(20) << rec.username << rec.fullName << endl;
         }
         file.close();
     }
@@ -1019,13 +1020,13 @@ public:
         ifstream file("students.txt");
         if (file.is_open())
         {
-            string username, password, fullName;
-            while (file >> username >> password)
+            string line;
+            StudentRecord rec;
+            while (getline(file, line))
             {
-                getline(file, fullName);
-                if (!fullName.empty() && fullName[0] == ' ')
-                    fullName = fullName.substr(1);
-                students.push_back(Student(username, password, fullName));
+                if (!parseStudentLine(line, rec))
+                    continue;
+                students.push_back(Student(rec.username, rec.password, rec.fullName));
             }
             file.close();
         }
