@@ -42,8 +42,8 @@ inline bool parseIntStrict(const std::string &text, int &out)
     }
 }
 
-// Parses "3, 1,2,x,3" into {3, 1, 2}: invalid entries and repeats are
-// skipped, and the first-seen order is kept.
+// Parses "3, 1,2,x,3" into {3, 1, 2}: invalid entries, non-positive IDs
+// and repeats are skipped, and the first-seen order is kept.
 inline std::vector<int> parseIdList(const std::string &csv)
 {
     std::vector<int> ids;
@@ -52,7 +52,8 @@ inline std::vector<int> parseIdList(const std::string &csv)
     while (std::getline(ss, item, ','))
     {
         int id;
-        if (!parseIntStrict(item, id))
+        // Question IDs must be positive; 0 and negatives are ignored.
+        if (!parseIntStrict(item, id) || id <= 0)
             continue;
         bool seen = false;
         for (int existing : ids)
@@ -142,4 +143,133 @@ inline bool isStorablePassword(const std::string &password)
         if (std::isspace(static_cast<unsigned char>(c)) || c == '\0')
             return false;
     return true;
+}
+
+// One line of assignments.txt: "student|examName".
+struct AssignmentRecord
+{
+    std::string student;
+    std::string exam;
+};
+
+inline std::string formatAssignmentLine(const AssignmentRecord &r)
+{
+    return r.student + "|" + r.exam;
+}
+
+// Accepts a trailing '\r' (CRLF files) because trim strips it.
+inline bool parseAssignmentLine(const std::string &line, AssignmentRecord &out)
+{
+    std::string s = trim(line);
+    if (s.empty())
+        return false;
+    std::size_t bar = s.find('|');
+    if (bar == std::string::npos)
+        return false;
+    AssignmentRecord r;
+    r.student = trim(s.substr(0, bar));
+    r.exam = trim(s.substr(bar + 1));
+    // A second '|' would mean the exam name isn't a single field.
+    if (r.student.empty() || r.exam.empty() || r.exam.find('|') != std::string::npos)
+        return false;
+    out = r;
+    return true;
+}
+
+// One line of exams.txt: "examName|declaredCount|id1,id2,..."
+struct ExamRecord
+{
+    std::string name;
+    int declaredCount = 0;
+    std::vector<int> questionIds;
+};
+
+inline std::string formatExamLine(const ExamRecord &r)
+{
+    std::string ids;
+    for (std::size_t i = 0; i < r.questionIds.size(); ++i)
+    {
+        if (i)
+            ids += ",";
+        ids += std::to_string(r.questionIds[i]);
+    }
+    return r.name + "|" + std::to_string(static_cast<int>(r.questionIds.size())) + "|" + ids;
+}
+
+inline bool parseExamLine(const std::string &line, ExamRecord &out)
+{
+    std::string s = trim(line);
+    if (s.empty())
+        return false;
+    std::size_t first = s.find('|');
+    if (first == std::string::npos)
+        return false;
+    std::size_t second = s.find('|', first + 1);
+    if (second == std::string::npos)
+        return false;
+    ExamRecord r;
+    r.name = trim(s.substr(0, first));
+    if (r.name.empty() || !parseIntStrict(s.substr(first + 1, second - first - 1), r.declaredCount))
+        return false;
+    r.questionIds = parseIdList(s.substr(second + 1));
+    out = r;
+    return true;
+}
+
+// One line of students.txt: "username obfuscatedPassword Full Name".
+// The password field cannot contain whitespace (see isStorablePassword).
+struct StudentRecord
+{
+    std::string username;
+    std::string password;
+    std::string fullName;
+};
+
+inline std::string formatStudentLine(const StudentRecord &r)
+{
+    return r.username + " " + r.password + " " + r.fullName;
+}
+
+inline bool parseStudentLine(const std::string &line, StudentRecord &out)
+{
+    std::string s = trim(line);
+    if (s.empty())
+        return false;
+    std::stringstream ss(s);
+    StudentRecord r;
+    if (!(ss >> r.username >> r.password))
+        return false;
+    std::string rest;
+    std::getline(ss, rest);
+    r.fullName = trim(rest);
+    if (r.username.empty() || r.password.empty() || r.fullName.empty())
+        return false;
+    out = r;
+    return true;
+}
+
+// Usernames are a single students.txt token: no whitespace or '|',
+// 1-32 characters, and not the reserved built-in admin login.
+inline bool isValidUsername(const std::string &s)
+{
+    std::string u = trim(s);
+    if (u.empty() || u.size() > 32)
+        return false;
+    if (u.find_first_of(" \t\r\n|") != std::string::npos)
+        return false;
+    std::string lower;
+    lower.reserve(u.size());
+    for (char c : u)
+        lower += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (lower == "admin")
+        return false;
+    return true;
+}
+
+// Reject empty, unstorable, or very short / very long passwords.
+inline bool isAcceptablePassword(const std::string &password)
+{
+    if (password.size() < 3 || password.size() > 64)
+        return false;
+    return isStorablePassword(password);
 }
