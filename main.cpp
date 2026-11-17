@@ -205,23 +205,24 @@ private:
         questionBank = loadQuestionBank();
     }
 
-    void saveQuestions()
+    // Returns false if the question bank could not be written.
+    bool saveQuestions()
     {
         ofstream file("questions.txt");
-        if (file.is_open())
+        if (!file.is_open())
+            return false;
+        for (const auto &q : questionBank)
         {
-            for (const auto &q : questionBank)
-            {
-                file << q.getQuestionID() << endl;
-                file << q.getQuestionText() << endl;
-                file << q.getOptionA() << endl;
-                file << q.getOptionB() << endl;
-                file << q.getOptionC() << endl;
-                file << q.getOptionD() << endl;
-                file << q.getCorrectAnswer() << endl;
-            }
-            file.close();
+            file << q.getQuestionID() << endl;
+            file << q.getQuestionText() << endl;
+            file << q.getOptionA() << endl;
+            file << q.getOptionB() << endl;
+            file << q.getOptionC() << endl;
+            file << q.getOptionD() << endl;
+            file << q.getCorrectAnswer() << endl;
         }
+        file.close();
+        return static_cast<bool>(file);
     }
 
     void addQuestion()
@@ -274,7 +275,12 @@ private:
         correct = readAnswerChoice("Enter Correct Answer (A/B/C/D): ");
 
         questionBank.push_back(Question(id, text, a, b, c, d, correct));
-        saveQuestions();
+        if (!saveQuestions())
+        {
+            questionBank.pop_back();
+            cout << "Could not save the question. Check that the folder is writable." << endl;
+            return;
+        }
         cout << "\nQuestion added successfully!" << endl;
     }
 
@@ -364,12 +370,19 @@ private:
         }
 
         ofstream file("exams.txt", ios::app);
-        if (file.is_open())
+        if (!file.is_open())
         {
-            file << formatExamLine({examName, numQuestions, questionIDs}) << endl;
-            file.close();
-            cout << "\nExam '" << examName << "' set successfully!" << endl;
+            cout << "Could not save the exam. Check that the folder is writable." << endl;
+            return;
         }
+        file << formatExamLine({examName, numQuestions, questionIDs}) << endl;
+        file.close();
+        if (!file)
+        {
+            cout << "Could not save the exam. Check that the folder is writable." << endl;
+            return;
+        }
+        cout << "\nExam '" << examName << "' set successfully!" << endl;
     }
 
     void assignQuizToStudent()
@@ -468,12 +481,19 @@ private:
         }
 
         ofstream assignFile("assignments.txt", ios::app);
-        if (assignFile.is_open())
+        if (!assignFile.is_open())
         {
-            assignFile << formatAssignmentLine({selectedStudent, selectedExam}) << endl;
-            assignFile.close();
-            cout << "\nAssigned successfully!" << endl;
+            cout << "Could not save the assignment. Check that the folder is writable." << endl;
+            return;
         }
+        assignFile << formatAssignmentLine({selectedStudent, selectedExam}) << endl;
+        assignFile.close();
+        if (!assignFile)
+        {
+            cout << "Could not save the assignment. Check that the folder is writable." << endl;
+            return;
+        }
+        cout << "\nAssigned successfully!" << endl;
     }
 
     void viewStudentMarks()
@@ -493,13 +513,17 @@ private:
         cout << string(60, '-') << endl;
 
         MarkRecord rec;
+        bool found = false;
         while (getline(file, line))
         {
             if (!parseMarkLine(line, rec))
                 continue;
             cout << left << setw(20) << rec.student << setw(30) << rec.exam << setw(10) << rec.score << endl;
+            found = true;
         }
         file.close();
+        if (!found)
+            cout << "No marks recorded yet." << endl;
     }
 
     void addStudent()
@@ -551,12 +575,19 @@ private:
         }
 
         ofstream file("students.txt", ios::app);
-        if (file.is_open())
+        if (!file.is_open())
         {
-            file << formatStudentLine({username, processPassword(password), fullName}) << endl;
-            file.close();
-            cout << "Student added successfully!" << endl;
+            cout << "Could not save the student. Check that the folder is writable." << endl;
+            return;
         }
+        file << formatStudentLine({username, processPassword(password), fullName}) << endl;
+        file.close();
+        if (!file)
+        {
+            cout << "Could not save the student. Check that the folder is writable." << endl;
+            return;
+        }
+        cout << "Student added successfully!" << endl;
     }
 
     // Drops every assignments.txt line for this student so a re-created
@@ -925,10 +956,16 @@ private:
         cout << "Percentage: " << fixed << setprecision(2) << percentage << "%" << endl;
 
         ofstream marksFile("marks.txt", ios::app);
-        if (marksFile.is_open())
+        if (!marksFile.is_open())
+        {
+            cout << "Warning: could not save your score to marks.txt." << endl;
+        }
+        else
         {
             marksFile << formatMarkLine({this->username, selectedExamName, score}) << endl;
             marksFile.close();
+            if (!marksFile)
+                cout << "Warning: could not save your score to marks.txt." << endl;
         }
     }
 
