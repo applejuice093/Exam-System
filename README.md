@@ -8,6 +8,7 @@ and see their marks. All data is stored in plain text files next to the program.
 
 **Admin**
 - Add multiple-choice questions (options A-D)
+- View the question bank
 - Set an exam paper from chosen question IDs
 - Assign exams to students
 - View students' marks
@@ -23,6 +24,7 @@ You need a C++17 compiler (g++ or clang++).
 
 ```bash
 make              # builds ./exam_system
+make help         # lists build and test targets
 ./exam_system
 ```
 
@@ -57,11 +59,21 @@ the `|` format. Exam names and usernames can't contain `|`.
 
 - An exam is scored against the questions that still exist in the bank, and an
   answer typed after the time limit is not counted.
-- Answers must be A-D; anything else re-prompts.
-- Exam names must be unique; assigning the same exam twice to a student is refused.
+- Answers must be A-D; anything else re-prompts. Answer letters in
+  `questions.txt` are read case-insensitively, so a hand-edited `b` still
+  matches a student's `B`.
+- Exam names must be unique; assigning the same exam twice to a student is refused,
+  including when `assignments.txt` was saved with Windows (CRLF) line endings.
 - Removing a student also removes their pending assignments (marks are kept).
-- Passwords that the XOR step would turn into whitespace (such as ones with an
-  apostrophe) are rejected because they can't be stored in `students.txt`.
+  Student and assignment files are rewritten through a temporary file so a
+  crash mid-save is less likely to leave a half-written roster.
+- Usernames must be 1-32 characters with no spaces or `|`, and cannot be
+  `admin` (the built-in administrator login, any capitalization).
+- Passwords must be 3-64 characters. Ones that the XOR step would turn into
+  whitespace (such as ones with an apostrophe) are also rejected because they
+  can't be stored in `students.txt`. Full names can be up to 80 characters.
+- Question-bank rows with a missing field, a non-positive or duplicate ID, or
+  an answer other than A-D are skipped when the bank is loaded.
 
 ## Code layout
 
@@ -77,10 +89,12 @@ make test        # unit tests, then the end-to-end smoke test
 make unit        # unit tests only
 ```
 
-- `tests/unit_tests.cpp` checks the helpers in `exam_utils.h` (no framework needed).
+- `tests/unit_tests.cpp` checks the helpers in `exam_utils.h` (no framework needed),
+  including file-line parsers, username rules and password limits.
 - `tests/smoke_test.sh` drives the real menus through stdin in a temporary folder:
-  admin login, adding questions, setting and assigning an exam, and a student
-  taking it.
+  admin login, adding questions, setting and assigning an exam, a student taking
+  it, account-rule rejections, removing a student, and scoring a lowercase
+  answer from a CRLF assignment file.
 
 Without make:
 
